@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "A lightweight cross-platform system font listing library"
 license = "MIT"
-repository = "https://github.com/SJMC-dev/rust_list_fonts"
+repository = "https://github.com/SJMC-Dev/rust_list_fonts"
 
 [features]
 default = []
