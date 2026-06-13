@@ -1,0 +1,22 @@
+[package]
+name = "list_fonts"
+version = "0.1.0"
+edition = "2021"
+description = "A lightweight cross-platform system font listing library"
+license = "MIT"
+repository = "https://github.com/SJMC-dev/rust_list_fonts"
+
+[features]
+default = []
+full = []
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-text = "20"
+core-foundation = "0.10"
+core-graphics = "0.23"
+
+[target.'cfg(windows)'.dependencies]
+dwrote = "0.11"
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+fontconfig = "0.9"
