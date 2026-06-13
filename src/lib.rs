@@ -7,6 +7,7 @@
 //! | macOS    | CoreText              |
 //! | Windows  | DirectWrite (Win 10+) |
 //! | Linux    | Fontconfig            |
+//! | Other    | Unsupported (empty)   |
 //!
 //! # Features
 //!
@@ -26,7 +27,8 @@
 //! ## `full` feature
 //!
 //! ```rust
-//! use list_fonts::{get_font_list_full, Font, Options, Style};
+//! # #[cfg(feature = "full")] {
+//! use list_fonts::{get_font_list_full, Options};
 //!
 //! let fonts = get_font_list_full(&Options {
 //!     family: false,
@@ -40,6 +42,7 @@
 //!         font.family_name, font.font_name, font.weight, font.variable
 //!     );
 //! }
+//! # }
 //! ```
 
 // ---------------------------------------------------------------------------
@@ -53,10 +56,13 @@ mod imp {
 
     /// Return sorted, deduplicated font family names via CoreText.
     pub fn family_names() -> Vec<String> {
-        font_collection::get_family_names()
+        let mut names: Vec<String> = font_collection::get_family_names()
             .iter()
             .map(|name| name.to_string())
-            .collect()
+            .collect();
+        names.sort();
+        names.dedup();
+        names
     }
 
     #[cfg(feature = "full")]
@@ -68,7 +74,8 @@ mod imp {
             Some(d) => d,
             None => return Vec::new(),
         };
-        descs.iter()
+        descs
+            .iter()
             .map(|desc| {
                 let traits = desc.traits();
                 let path = desc.font_path().map(|p| p.into());
@@ -212,7 +219,7 @@ mod imp {
     }
 }
 
-#[cfg(all(unix, not(target_os = "macos")))]
+#[cfg(target_os = "linux")]
 mod imp {
     use fontconfig::{Fontconfig, ObjectSet, Pattern};
 
@@ -255,15 +262,10 @@ mod imp {
         fonts
             .iter()
             .map(|font| {
-                let family = font
-                    .get_string(fontconfig::FC_FAMILY)
-                    .unwrap_or_default();
-                let name = font
-                    .get_string(fontconfig::FC_FULLNAME)
-                    .unwrap_or_default();
-                let path: Option<std::path::PathBuf> = font
-                    .get_string(fontconfig::FC_FILE)
-                    .map(|p| p.into());
+                let family = font.get_string(fontconfig::FC_FAMILY).unwrap_or_default();
+                let name = font.get_string(fontconfig::FC_FULLNAME).unwrap_or_default();
+                let path: Option<std::path::PathBuf> =
+                    font.get_string(fontconfig::FC_FILE).map(|p| p.into());
                 let slant = font.slant().unwrap_or(0);
                 let weight = font.weight().unwrap_or(fontconfig::FC_WEIGHT_REGULAR);
                 let width = font.width().unwrap_or(fontconfig::FC_WIDTH_NORMAL);
@@ -302,6 +304,20 @@ mod imp {
     fn stretch_from_fc(width: i32) -> f32 {
         // Fontconfig width is roughly a percentage (100 = normal).
         width as f32
+    }
+}
+
+#[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
+mod imp {
+    /// Return an empty list on unsupported platforms so dependents can still
+    /// compile for mobile and other non-desktop targets.
+    pub fn family_names() -> Vec<String> {
+        Vec::new()
+    }
+
+    #[cfg(feature = "full")]
+    pub fn all_fonts() -> Vec<super::Font> {
+        Vec::new()
     }
 }
 
@@ -458,8 +474,7 @@ pub fn get_font_list_full(options: &Options) -> Vec<Font> {
             fonts.retain(|f| seen.insert(f.family_name.clone()));
         } else {
             // Fast path: just return family names, no metadata.
-            let mut names: Vec<String> =
-                fonts.into_iter().map(|f| f.family_name).collect();
+            let mut names: Vec<String> = fonts.into_iter().map(|f| f.family_name).collect();
             names.sort();
             names.dedup();
             return names

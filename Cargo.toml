@@ -12,11 +12,9 @@ full = []
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-text = "20"
-core-foundation = "0.10"
-core-graphics = "0.23"
 
 [target.'cfg(windows)'.dependencies]
 dwrote = "0.11"
 
-[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+[target.'cfg(target_os = "linux")'.dependencies]
 fontconfig = "0.9"
